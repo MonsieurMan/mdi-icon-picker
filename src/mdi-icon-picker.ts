@@ -65,7 +65,7 @@ export class MdiIconPicker extends LitElement {
     // Define the element's template
     render() {
         return html`
-            <link rel=stylesheet href="${this.fontUrl}">
+            <link rel="stylesheet" href="${this.fontUrl}">
             <style>
                 .icon-btn {
                     display: inline-flex;

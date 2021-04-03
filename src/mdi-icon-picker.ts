@@ -34,9 +34,6 @@ export class MdiIconPicker extends LitElement {
     constructor() {
         super();
         this.loadData();
-        this.addEventListener('focusin', () => {
-            this.showResults = true;
-        });
         this.addEventListener('focusout', () => {
             setTimeout(() => {
                 if (document.activeElement === this.input) return; // Fix display of results when using non default input.
@@ -98,12 +95,11 @@ export class MdiIconPicker extends LitElement {
     }
 
     _focusInput() {
-        this.input?.focus();
         this.showResults = true;
+        setTimeout(() => this.input?.focus());
     }
 
     firstUpdated() {
-        // Marche pas
         const el = this.querySelector('[slot=input]') as HTMLInputElement;
         el?.addEventListener('keyup', this._launchSearch.bind(this));
     }
@@ -156,14 +152,15 @@ export class MdiIconPicker extends LitElement {
                 }
                 .popup {
                     width: calc(32px * 7 + 16px);
+                    top: 18px;
                     z-index: 1;
                     background-color: white;
-                    visibility: hidden;
+                    transform: scale(0);
                     position: absolute;
                     border: 1px solid #ccc;
                     border-radius: 8px;
+                    transition: transform 75ms cubic-bezier(.17,.84,.44,1);
                 }
-                /* inset 0 -6px 4px -5px rgba(32, 33, 36, 0.28); */
                 .results {
                     max-height: 140px;
                     overflow-y: scroll;
@@ -181,8 +178,21 @@ export class MdiIconPicker extends LitElement {
                     display: inline-block;
                     margin: 8px;
                 }
+                slot[name=input] > input {
+                    width: 100%;
+                    box-sizing: border-box;
+                    padding: 16px;
+                    margin: 0;
+                    border: solid var(--mdi-picker-primary) 2px;
+                    border-radius: 8px;
+                    font-size: 1rem;
+                    font-family: 'Roboto';
+                    outline: none;
+                    line-height: 1rem;
+                }
                 [visible] {
                     visibility: visible;
+                    transform: scale(1);
                 }
             </style>
 
@@ -195,7 +205,7 @@ export class MdiIconPicker extends LitElement {
             </button></slot>
 
             <div class="popup" ?visible="${this.showResults}">
-                <slot name="input"><input @keyup="${this._launchSearch}" /></slot>
+                <slot name="input"><input @keyup="${this._launchSearch}" placeholder="Search an icon" /></slot>
                 <div class="results">
                     ${this.searchResults.map(i => html`<div class="icon-btn" @click="${() => this._selectIcon(i)}"><span class="mdi mdi-${i.name}"></span></div>`)}
                 </div>

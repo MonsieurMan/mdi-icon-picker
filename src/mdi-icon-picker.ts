@@ -89,11 +89,36 @@ export class MdiIconPicker extends LitElement {
             <link rel="stylesheet" href="${this.fontUrl}">
             <style>
                 :host {
+                    --mdi-picker-primary: #6200EE;
+                    --mdi-picker-color: white;
                     position: relative;
                     display: inline-block;
                 }
                 :host(:focus-within) > .results {
                     visibility: visible;
+                }
+                button {
+                    display: flex;
+                    align-items: center;
+                    padding: 6px 13px 6px 5px;
+                    font-size: 14px;
+                    font-family: 'Roboto';
+                    line-height: 16px;
+                    border-radius: 4px;
+                    border: none;
+                    cursor: pointer;
+                    background-color: var(--mdi-picker-primary);
+                    color: var(--mdi-picker-color);
+                }
+                button > span {
+                    padding: 4px 0 4px 8px;
+                }
+                button > i {
+                    height: 24px;
+                }
+                button > .mdi::before {
+                    font-size: 24px;
+                    line-height: 1;
                 }
                 .icon-btn {
                     display: inline-flex;
@@ -121,12 +146,15 @@ export class MdiIconPicker extends LitElement {
                     visibility: visible;
                 }
             </style>
-            ${this.selectedIcon !== undefined
-                ? html`<span class="mdi mdi-${this.selectedIcon.name}"></span>`
+            <slot name="button"><button>
+                ${this.selectedIcon !== undefined
+                ? html`<i class="mdi mdi-${this.selectedIcon.name}"></i>`
                 : ''
             }
-            <slot name="input"><input @keyup="${this._launchSearch}" /></slot>
+                <span>SELECT ICON</span>
+            </button></slot>
             <div class="results" ?visible="${this.showResults}">
+                <slot name="input"><input @keyup="${this._launchSearch}" /></slot>
                 ${this.searchResults.slice(0, 100).map(i => html`
                     <div class="icon-btn" @click="${() => this._handleClick(i)}">
                         <span class="mdi mdi-${i.name}"></span>

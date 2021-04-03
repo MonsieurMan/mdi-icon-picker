@@ -29,6 +29,7 @@ export class MdiIconPicker extends LitElement {
 
     searchIndex: lunr.Index = lunr(() => { });
     iconMap: Map<string, Icon> = new Map();
+    defaultResults: Icon[] = [];
 
     constructor() {
         super();
@@ -38,14 +39,18 @@ export class MdiIconPicker extends LitElement {
         });
         this.addEventListener('focusout', () => {
             setTimeout(() => {
+                if (document.activeElement === this.input) return; // Fix display of results when using non default input.
                 this.showResults = false;
             }, 100);
         });
     }
 
     async loadData() {
+        // TODO: Allow the user to fetch it.
         const res = await fetch('https://raw.githubusercontent.com/Templarian/MaterialDesign/master/meta.json');
         const data: Icon[] = await res.json();
+        this.defaultResults = data;
+        this.searchResults = data;
         data.forEach(i => this.iconMap.set(i.id, i));
         // data.map(i => ({name: i.name, aliases: i.aliases, tags: i.tags}));
         this.searchIndex = lunr(function () {
@@ -60,27 +65,47 @@ export class MdiIconPicker extends LitElement {
     _launchSearch(event: KeyboardEvent) {
         this.showResults = true;
         const value = (event.target as HTMLInputElement).value;
+
         if (!value || value.length === 0) {
-            this.searchResults = [];
+            this.searchResults = this.defaultResults;
             return;
         }
+
         this.searchResults = this.searchIndex
             .search(value + '*')
             .map(si => (this.iconMap.get(si.ref) as Icon));
-        console.log(this.searchResults)
     }
 
-    _handleClick(icon: Icon) {
+    _selectIcon(icon: Icon) {
         this.selectedIcon = icon;
-        console.log(icon.name);
         this.showResults = false;
+    }
+
+    /**
+     * Returns either the default input, or the slotted element.
+     */
+    private get input(): HTMLInputElement | undefined {
+        const input = this.querySelector('[slot=input]') as HTMLInputElement | null;
+        const defaultInput = this.shadowRoot?.querySelector('input');
+
+        if (input) {
+            return input;
+        } else if (defaultInput) {
+            return defaultInput;
+        }
+
+        return undefined;
+    }
+
+    _focusInput() {
+        this.input?.focus();
+        this.showResults = true;
     }
 
     firstUpdated() {
         // Marche pas
         const el = this.querySelector('[slot=input]') as HTMLInputElement;
         el?.addEventListener('keyup', this._launchSearch.bind(this));
-
     }
 
     // Define the element's template
@@ -93,9 +118,6 @@ export class MdiIconPicker extends LitElement {
                     --mdi-picker-color: white;
                     position: relative;
                     display: inline-block;
-                }
-                :host(:focus-within) > .results {
-                    visibility: visible;
                 }
                 button {
                     display: flex;
@@ -132,34 +154,51 @@ export class MdiIconPicker extends LitElement {
                 .icon-btn:hover {
                     background-color: #e4e4ea;
                 }
-                .results {
-                    width: calc(32px * 7 + 24px);
+                .popup {
+                    width: calc(32px * 7 + 16px);
                     z-index: 1;
                     background-color: white;
                     visibility: hidden;
                     position: absolute;
                     border: 1px solid #ccc;
                     border-radius: 8px;
-                    padding: 2px;
+                }
+                /* inset 0 -6px 4px -5px rgba(32, 33, 36, 0.28); */
+                .results {
+                    max-height: 140px;
+                    overflow-y: scroll;
+                    padding: 0px 8px 8px;
+                    border-bottom-left-radius: 8px;
+                    border-bottom-right-radius: 8px; 
+                    background-image: linear-gradient(to bottom, #ffffff, rgba(255, 255, 255, 0)), linear-gradient(to top, #ffffff, rgba(255, 255, 255, 0)), linear-gradient(to bottom, #d2d2d2, rgba(255, 255, 255, 0)), linear-gradient(to top, #d2d2d2, rgba(255, 255, 255, 0));
+                    background-position: 0 0, 0 100%, 0 0, 0 100%;
+                    background-repeat: no-repeat;
+                    background-color: white;
+                    background-size: 100% 5em, 100% 5em, 100% 1em, 100% 1em;
+                    background-attachment: local, local, scroll, scroll;
+                }
+                slot[name=input] {
+                    display: inline-block;
+                    margin: 8px;
                 }
                 [visible] {
                     visibility: visible;
                 }
             </style>
-            <slot name="button"><button>
+
+            <slot name="button"><button @click="${this._focusInput}">
                 ${this.selectedIcon !== undefined
                 ? html`<i class="mdi mdi-${this.selectedIcon.name}"></i>`
                 : ''
             }
                 <span>SELECT ICON</span>
             </button></slot>
-            <div class="results" ?visible="${this.showResults}">
+
+            <div class="popup" ?visible="${this.showResults}">
                 <slot name="input"><input @keyup="${this._launchSearch}" /></slot>
-                ${this.searchResults.slice(0, 100).map(i => html`
-                    <div class="icon-btn" @click="${() => this._handleClick(i)}">
-                        <span class="mdi mdi-${i.name}"></span>
-                    </div>
-                `)}
+                <div class="results">
+                    ${this.searchResults.map(i => html`<div class="icon-btn" @click="${() => this._selectIcon(i)}"><span class="mdi mdi-${i.name}"></span></div>`)}
+                </div>
             </div>
         `;
     }

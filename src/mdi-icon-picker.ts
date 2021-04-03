@@ -24,18 +24,30 @@ export class MdiIconPicker extends LitElement {
     @internalProperty()
     selectedIcon?: Icon;
 
+    @internalProperty()
+    showResults = false;
+
     searchIndex: lunr.Index = lunr(() => { });
     iconMap: Map<string, Icon> = new Map();
 
     constructor() {
         super();
         this.loadData();
+        this.addEventListener('focusin', () => {
+            this.showResults = true;
+        });
+        this.addEventListener('focusout', () => {
+            setTimeout(() => {
+                this.showResults = false;
+            }, 100);
+        });
     }
 
     async loadData() {
         const res = await fetch('https://raw.githubusercontent.com/Templarian/MaterialDesign/master/meta.json');
         const data: Icon[] = await res.json();
         data.forEach(i => this.iconMap.set(i.id, i));
+        // data.map(i => ({name: i.name, aliases: i.aliases, tags: i.tags}));
         this.searchIndex = lunr(function () {
             this.ref('id');
             this.field('name');
@@ -46,6 +58,7 @@ export class MdiIconPicker extends LitElement {
     }
 
     _launchSearch(event: KeyboardEvent) {
+        this.showResults = true;
         const value = (event.target as HTMLInputElement).value;
         if (!value || value.length === 0) {
             this.searchResults = [];
@@ -59,7 +72,15 @@ export class MdiIconPicker extends LitElement {
 
     _handleClick(icon: Icon) {
         this.selectedIcon = icon;
-        console.log(this.selectedIcon);
+        console.log(icon.name);
+        this.showResults = false;
+    }
+
+    firstUpdated() {
+        // Marche pas
+        const el = this.querySelector('[slot=input]') as HTMLInputElement;
+        el?.addEventListener('keyup', this._launchSearch.bind(this));
+
     }
 
     // Define the element's template
@@ -67,6 +88,13 @@ export class MdiIconPicker extends LitElement {
         return html`
             <link rel="stylesheet" href="${this.fontUrl}">
             <style>
+                :host {
+                    position: relative;
+                    display: inline-block;
+                }
+                :host(:focus-within) > .results {
+                    visibility: visible;
+                }
                 .icon-btn {
                     display: inline-flex;
                     height: 32px;
@@ -79,17 +107,32 @@ export class MdiIconPicker extends LitElement {
                 .icon-btn:hover {
                     background-color: #e4e4ea;
                 }
+                .results {
+                    width: calc(32px * 7 + 24px);
+                    z-index: 1;
+                    background-color: white;
+                    visibility: hidden;
+                    position: absolute;
+                    border: 1px solid #ccc;
+                    border-radius: 8px;
+                    padding: 2px;
+                }
+                [visible] {
+                    visibility: visible;
+                }
             </style>
             ${this.selectedIcon !== undefined
                 ? html`<span class="mdi mdi-${this.selectedIcon.name}"></span>`
                 : ''
             }
-            <input @keyup="${this._launchSearch}" />
-            ${this.searchResults.slice(0, 100).map(i => html`
-                <div class="icon-btn" @click="${() => this._handleClick(i)}">
-                    <span class="mdi mdi-${i.name}"></span>
-                </div>
-            `)}
+            <slot name="input"><input @keyup="${this._launchSearch}" /></slot>
+            <div class="results" ?visible="${this.showResults}">
+                ${this.searchResults.slice(0, 100).map(i => html`
+                    <div class="icon-btn" @click="${() => this._handleClick(i)}">
+                        <span class="mdi mdi-${i.name}"></span>
+                    </div>
+                `)}
+            </div>
         `;
     }
 }

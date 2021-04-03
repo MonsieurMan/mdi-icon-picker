@@ -26,6 +26,7 @@
     "webpack-merge": "^5.7.3"
   },
   "devDependencies": {
+    "@material/mwc-textfield": "^0.20.0",
     "css-loader": "^5.2.0"
   }
 }
